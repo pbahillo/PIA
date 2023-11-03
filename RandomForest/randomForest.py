@@ -87,14 +87,14 @@ def plot_decision_regions(X, y, classifier, test_idx=None, resolution=0.02):
                     s=100,
                     label='test set')
 
-        # Graficar Region de desición
-        X_combined = np.vstack((X_train_std, X_test_std))
-        y_combined = np.hstack((y_train, y_test))
 
-        plot_decision_regions(X_combined, y_combined,
-                              classifier=bosque,
-                              test_idx=range(105, 150))
+# Graficar Region de desición
+X_combined = np.vstack((X_train_std, X_test_std))
+y_combined = np.hstack((y_train, y_test))
 
+plot_decision_regions(X_combined, y_combined,
+                      classifier=bosque,
+                      test_idx=range(105, 150))
 
 plt.xlabel('Longitud de pétalo [cm]')
 plt.ylabel('Ancho de pétalo [cm]')
