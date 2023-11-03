@@ -1,54 +1,111 @@
-# importing required libraries
-# importing Scikit-learn library and datasets package
-# importing random forest classifier from assemble module
+import numpy as np
 from sklearn import datasets
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn import metrics
-import pandas as pd
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from matplotlib.colors import ListedColormap
+import matplotlib.pyplot as plt
 
-# Loading the iris plants dataset (classification)
+# Cargamos los datos de iris
+
 iris = datasets.load_iris()
+X = iris.data[:, [2, 3]]
+y = iris.target
+print(X[:5])
 
-# dividing the datasets into two parts i.e. training datasets and test datasets
-X, y = datasets.load_iris(return_X_y=True)
+print('\nClass labels:', np.unique(y))
 
-# Splitting arrays or matrices into random train and test subsets
+# 80 % del conjunto de datos para entrenamiento y 20 % para validacion
+X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                    test_size=0.2,
+                                                    random_state=1,
+                                                    stratify=y)
+print('Numero de muestras en y:', np.bincount(y))
+print('Numero de muestras en y_train:', np.bincount(y_train))
+print('Numero de muestras en y_test:', np.bincount(y_test))
 
-# i.e. 70 % training dataset and 30 % test datasets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30)
+# Estandarizar los datos
+sc = StandardScaler()
+sc.fit(X_train)
 
-# creating dataframe of IRIS dataset
-data = pd.DataFrame({'sepallength': iris.data[:, 0],
-                     'sepalwidth': iris.data[:, 1],
-                     'petallength': iris.data[:, 2],
-                     'petalwidth': iris.data[:, 3],
-                     'species': iris.target})
+X_train_std = sc.transform(X_train)
+X_test_std = sc.transform(X_test)
+# Crear el modelo para ajustar
 
-# printing the top 5 datasets in iris dataset
-print(data.head())
-# creating an RF classifier
-clf = RandomForestClassifier(n_estimators=100)
+bosque = RandomForestClassifier(n_estimators=25,
+                                criterion='entropy',
+                                max_features='sqrt',
+                                max_depth=10)
 
-# Training the model on the training dataset
-# fit function is used to train the model using the training sets as parameters
-clf.fit(X_train, y_train)
+bosque.fit(X_train_std, y_train)
 
-# performing predictions on the test dataset
-y_pred = clf.predict(X_test)
+# Precision global de clasificación corecta
+print('Train Accuracy : %.5f' % bosque.score(X_train_std, y_train))
+print('Test Accuracy : %.5f' % bosque.score(X_test_std, y_test))
 
-# metrics are used to find accuracy or error
 
-# using metrics module for accuracy calculation
-print("ACCURACY OF THE MODEL: ", metrics.accuracy_score(y_test, y_pred))
-# predicting which type of flower it is.
-clf.predict([[3, 3, 2, 2]])
-# importing random forest classifier from assemble module
-# Create a Random forest Classifier
-clf = RandomForestClassifier(n_estimators=100)
+def plot_decision_regions(X, y, classifier, test_idx=None, resolution=0.02):
+    # configurar el generador de marcadores y el mapa de colores
+    markers = ('s', 'x', 'o', '^', 'v')
+    colors = ('red', 'blue', 'lightgreen', 'gray', 'cyan')
+    cmap = ListedColormap(colors[:len(np.unique(y))])
 
-# Train the model using the training sets
-clf.fit(X_train, y_train)
-# using the feature importance variable
-feature_imp = pd.Series(clf.feature_importances_, index=iris.feature_names).sort_values(ascending=False)
-print(feature_imp)
+    # trazar la superficie de decisión
+    x1_min, x1_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    x2_min, x2_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx1, xx2 = np.meshgrid(np.arange(x1_min, x1_max, resolution),
+                           np.arange(x2_min, x2_max, resolution))
+    Z = classifier.predict(np.array([xx1.ravel(), xx2.ravel()]).T)
+    Z = Z.reshape(xx1.shape)
+    plt.contourf(xx1, xx2, Z, alpha=0.3, cmap=cmap)
+    plt.xlim(xx1.min(), xx1.max())
+    plt.ylim(xx2.min(), xx2.max())
+
+    for idx, cl in enumerate(np.unique(y)):
+        plt.scatter(x=X[y == cl, 0],
+                    y=X[y == cl, 1],
+                    alpha=0.8,
+                    color=colors[idx],
+                    marker=markers[idx],
+                    label=cl,
+                    edgecolor='black')
+
+    # resaltar ejemplos de prueba
+    if test_idx:
+        # graficar todos los ejemplos
+        X_test, y_test = X[test_idx, :], y[test_idx]
+
+        plt.scatter(X_test[:, 0],
+                    X_test[:, 1],
+                    c='none',
+                    edgecolor='black',
+                    alpha=1.0,
+                    linewidth=1,
+                    marker='o',
+                    s=100,
+                    label='test set')
+
+        # Graficar Region de desición
+        X_combined = np.vstack((X_train_std, X_test_std))
+        y_combined = np.hstack((y_train, y_test))
+
+        plot_decision_regions(X_combined, y_combined,
+                              classifier=bosque,
+                              test_idx=range(105, 150))
+
+
+plt.xlabel('Longitud de pétalo [cm]')
+plt.ylabel('Ancho de pétalo [cm]')
+plt.legend(loc='upper left')
+plt.tight_layout()
+# plt.savefig('images/03_20.png', dpi=300)
+plt.show()
+
+y_pred = bosque.predict(X_test_std)
+cm = confusion_matrix(y_test, y_pred, normalize='true')
+
+cm_display = ConfusionMatrixDisplay(cm, display_labels=['I', 'S', 'V'])
+cm_display.plot()
+cm_display.ax_.set(title='RF2022', xlabel='Clases predichas', ylabel='Clases verdaderas')
