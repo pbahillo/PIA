@@ -101,11 +101,11 @@ plt.ylabel('Ancho de pétalo [cm]')
 plt.legend(loc='upper left')
 plt.tight_layout()
 # plt.savefig('images/03_20.png', dpi=300)
-plt.show()
 
 y_pred = bosque.predict(X_test_std)
 cm = confusion_matrix(y_test, y_pred, normalize='true')
-
 cm_display = ConfusionMatrixDisplay(cm, display_labels=['I', 'S', 'V'])
 cm_display.plot()
 cm_display.ax_.set(title='RF2022', xlabel='Clases predichas', ylabel='Clases verdaderas')
+
+plt.show()
